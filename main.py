@@ -14,16 +14,21 @@ ev_data_cache = [
 
 def fetch_ev_data():
     global ev_data_cache
+    api_key = os.environ.get("OCM_API_KEY")
+    if not api_key:
+        logging.warning("OCM_API_KEY NOT FOUND in Render Environment Variables!")
+        return
+        
     try:
-        url = "https://api.openchargemap.io/v3/poi/?output=json&countrycode=IN&maxresults=5000&compact=true&verbose=false"
-        api_key = os.environ.get("OCM_API_KEY")
-        if api_key:
-            url += f"&key={api_key}"
-        response = requests.get(url, timeout=60)
+        # Lowered to 1000 to prevent timeouts on Render free tier
+        url = f"https://api.openchargemap.io/v3/poi/?output=json&countrycode=IN&maxresults=1000&compact=true&verbose=false&key={api_key}"
+        logging.info("Fetching 1000 stations from OCM...")
+        response = requests.get(url, timeout=45)
         if response.status_code == 200:
             data = response.json()
             if isinstance(data, list) and len(data) > 0:
                 ev_data_cache = data
+                logging.info(f"SUCCESS: Updated cache with {len(ev_data_cache)} stations.")
     except Exception as e:
         logging.error(f"API Failed: {e}")
 
