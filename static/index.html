@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Intelligence Agent - LIVE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #0f172a; color: white; font-family: system-ui, sans-serif; }
+        .card { background-color: #1e293b; border-radius: 0.75rem; padding: 1.5rem; border: 1px solid #334155; margin-bottom: 1.5rem; }
+        .glow-blue { border-left: 4px solid #3b82f6; }
+        .glow-green { border-left: 4px solid #10b981; }
+        .glow-yellow { border-left: 4px solid #f59e0b; }
+        .glow-purple { border-left: 4px solid #8b5cf6; }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <div class="flex justify-between items-start mb-8 flex-wrap gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-blue-400">⚡ EV Infrastructure Intelligence</h1>
+                <p class="text-slate-400 text-sm mt-1">LIVE DATA • Backend Proxy • <span id="status-text" class="text-green-400">Connecting...</span></p>
+            </div>
+            <div class="bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 text-right">
+                <p class="text-xs text-slate-400">SERVER STATUS</p>
+                <p id="timestamp" class="text-sm font-mono text-green-400 font-bold">Initializing...</p>
+                <p class="text-xs text-green-400 mt-1"><span class="w-2 h-2 bg-green-500 rounded-full pulse inline-block"></span> AGENT ONLINE</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="card glow-blue">
+                <p class="text-xs text-slate-400">TOTAL STATIONS</p>
+                <p id="kpi-stations" class="text-2xl font-bold mt-2">--</p>
+            </div>
+            <div class="card glow-green">
+                <p class="text-xs text-slate-400">TOTAL PLUGS</p>
+                <p id="kpi-plugs" class="text-2xl font-bold mt-2">--</p>
+            </div>
+            <div class="card glow-yellow">
+                <p class="text-xs text-slate-400">DC FAST</p>
+                <p id="kpi-dc" class="text-2xl font-bold mt-2">--</p>
+            </div>
+            <div class="card glow-purple">
+                <p class="text-xs text-slate-400">AC SLOW</p>
+                <p id="kpi-ac" class="text-2xl font-bold mt-2">--</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+            <div class="card"><h2 class="text-lg font-semibold mb-4">🔌 Charger Types</h2><canvas id="typeChart" height="200"></canvas></div>
+            <div class="card"><h2 class="text-lg font-semibold mb-4">🗺️ Top States</h2><canvas id="stateChart" height="200"></canvas></div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+            <div class="card">
+                <h2 class="text-lg font-semibold mb-4 text-green-400">📡 Detected Stations</h2>
+                <div id="stations-container" class="space-y-3 max-h-64 overflow-y-auto text-sm"><p class="text-slate-500">Loading...</p></div>
+            </div>
+            <div class="card">
+                <h2 class="text-lg font-semibold mb-4 text-yellow-400">🏢 Top Operators</h2>
+                <div id="operators-container" class="space-y-3 max-h-64 overflow-y-auto text-sm"><p class="text-slate-500">Calculating...</p></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let typeChart, stateChartInstance;
+        function initCharts() {
+            typeChart = new Chart(document.getElementById('typeChart').getContext('2d'), {
+                type: 'doughnut', data: { labels: ['DC Fast', 'AC Slow'], datasets: [{ data: [0, 0], backgroundColor: ['#f59e0b', '#3b82f6'] }] },
+                options: { responsive: true, plugins: { legend: { labels: { color: '#94a3b8' } } } }
+            });
+            stateChartInstance = new Chart(document.getElementById('stateChart').getContext('2d'), {
+                type: 'bar', data: { labels: [], datasets: [{ label: 'Stations', data: [], backgroundColor: '#8b5cf6' }] },
+                options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#64748b' } }, y: { ticks: { color: '#94a3b8' } } } }
+            });
+        }
+
+        async function fetchLiveData() {
+            document.getElementById('status-text').innerText = "Fetching from Backend...";
+            try {
+                let response = await fetch('/api/data');
+                if (!response.ok) throw new Error('Backend Error');
+                let data = await response.json();
+                if (!Array.isArray(data)) throw new Error('Invalid Data');
+                
+                document.getElementById('status-text').innerText = "Live API Connected (No CORS)";
+                document.getElementById('status-text').className = "text-green-400";
+                document.getElementById('timestamp').innerText = new Date().toLocaleString();
+                processAndRenderData(data);
+            } catch (error) {
+                document.getElementById('status-text').innerText = "Waiting for server wake up...";
+                document.getElementById('status-text').className = "text-yellow-400";
+                setTimeout(fetchLiveData, 5000); 
+            }
+        }
+
+        function processAndRenderData(data) {
+            let totalPlugs = 0, dcCount = 0, acCount = 0;
+            let stateCounts = {}, operatorCounts = {}, latestStations = [];
+
+            data.forEach(poi => {
+                if (poi.Connections) {
+                    poi.Connections.forEach(conn => {
+                        totalPlugs++;
+                        if (conn.LevelID === 3 || (conn.PowerKW && conn.PowerKW > 20)) dcCount++;
+                        else acCount++;
+                    });
+                }
+                let state = poi.Address?.StateOrProvince || 'Unknown';
+                stateCounts[state] = (stateCounts[state] || 0) + 1;
+                let operator = poi.OperatorInfo?.Title || 'Unknown';
+                operatorCounts[operator] = (operatorCounts[operator] || 0) + 1;
+                
+                if (poi.DateLastStatusUpdate && latestStations.length < 8) {
+                    latestStations.push({
+                        name: poi.AddressInfo?.Title || 'Station',
+                        address: `${poi.AddressInfo?.AddressLine1 || ''}, ${state}`,
+                        operator: operator
+                    });
+                }
+            });
+
+            document.getElementById('kpi-stations').innerText = data.length;
+            document.getElementById('kpi-plugs').innerText = totalPlugs;
+            document.getElementById('kpi-dc').innerText = dcCount;
+            document.getElementById('kpi-ac').innerText = acCount;
+
+            typeChart.data.datasets[0].data = [dcCount, acCount];
+            typeChart.update();
+
+            let topStates = Object.entries(stateCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            stateChartInstance.data.labels = topStates.map(s => s[0]);
+            stateChartInstance.data.datasets[0].data = topStates.map(s => s[1]);
+            stateChartInstance.update();
+
+            document.getElementById('stations-container').innerHTML = latestStations.map(s => `
+                <div class="p-2 bg-slate-800 rounded border border-slate-700 fade-in">
+                    <div class="font-bold text-white">${s.name}</div>
+                    <div class="text-slate-400 text-xs">${s.address}</div>
+                    <div class="text-blue-400 text-xs mt-1">${s.operator}</div>
+                </div>
+            `).join('');
+
+            let topOps = Object.entries(operatorCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
+            document.getElementById('operators-container').innerHTML = topOps.map(op => `
+                <div class="flex justify-between p-2 bg-slate-800 rounded border border-slate-700 fade-in">
+                    <span class="text-white">${op[0]}</span>
+                    <span class="text-purple-400 font-bold">${op[1]}</span>
+                </div>
+            `).join('');
+        }
+
+        initCharts();
+        fetchLiveData();
+    </script>
+</body>
+</html>
