@@ -152,12 +152,17 @@
             try {
                 let res = await fetch('/api/data');
                 let data = await res.json();
-                if (Array.isArray(data)) {
+                 if (Array.isArray(data)) {
+                    if (data.length === 0) {
+                        console.log("Data is empty, retrying in 3 seconds...");
+                        setTimeout(loadData, 3000); // RETRY IF EMPTY
+                        return;
+                    }
                     allStations = data;
                     populateOperatorFilter(data);
                     applyFilters();
                 }
-            } catch (e) {
+             catch (e) {
                 console.error("Waiting for backend...", e);
                 setTimeout(loadData, 3000);
             }
