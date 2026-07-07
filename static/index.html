@@ -8,8 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #334155; }
@@ -32,7 +30,6 @@
         .dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
         .marker-dc { width: 18px; height: 18px; background-color: #EF4444; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5); }
         .marker-ac { width: 14px; height: 14px; background-color: #3B82F6; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5); }
-        .custom-cluster { background: #1e293b; color: white; padding: 8px 14px; border-radius: 24px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 2px solid white; }
         .leaflet-popup-content-wrapper { background: white; color: #334155; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 0; overflow: hidden; }
         .leaflet-popup-content { margin: 0; min-width: 220px; }
         .leaflet-popup-tip { background: white; }
@@ -88,19 +85,13 @@
 
     <script>
         let allStations = [];
-        let map, markers;
+        let map;
+        let activeMarkers = [];
 
         function initMap() {
             map = L.map('map').setView([20.5937, 78.9629], 5);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: 'OSM &copy; CARTO', maxZoom: 19
-            }).addTo(map);
-
-            markers = L.markerClusterGroup({
-                maxClusterRadius: 50, showCoverageOnHover: false,
-                iconCreateFunction: function(cluster) {
-                    return L.divIcon({ html: '<div class="custom-cluster">' + cluster.getChildCount() + '</div>', className: '', iconSize: L.point(50, 36) });
-                }
+                attribution: 'OSM', maxZoom: 19
             }).addTo(map);
         }
 
@@ -128,7 +119,9 @@
         function applyFilters() {
             let typeFilter = document.getElementById('filter-type').value;
             let opFilter = document.getElementById('filter-operator').value;
-            markers.clearLayers();
+            
+            activeMarkers.forEach(m => map.removeLayer(m));
+            activeMarkers = [];
             let visibleCount = 0; let plugCount = 0;
 
             allStations.forEach(station => {
@@ -153,15 +146,14 @@
                 let powerKW = hasDC ? (plugs.find(c=>c.PowerKW)?plugs.find(c=>c.PowerKW).PowerKW:'>20') : (plugs.find(c=>c.PowerKW)?plugs.find(c=>c.PowerKW).PowerKW:'<20');
                 let badgeClass = hasDC ? 'badge-dc' : 'badge-ac'; 
                 let badgeText = hasDC ? 'DC Fast' : 'AC Slow';
-                
                 let title = station.AddressInfo ? (station.AddressInfo.Title || 'Unknown') : 'Unknown';
                 let address = station.AddressInfo ? (station.AddressInfo.AddressLine1 || '') : '';
                 let state = station.AddressInfo ? (station.AddressInfo.StateOrProvince || '') : '';
-
                 let popupContent = '<div><div class="popup-header"><div class="popup-title">'+title+'</div><div class="popup-address">'+address+', '+state+'</div></div><div class="popup-body"><div class="popup-row"><span class="popup-key">Network</span><span class="popup-val">'+operator+'</span></div><div class="popup-row" style="border-top: 1px solid #f1f5f9; padding-top: 10px; margin-top: 4px;"><span class="popup-key">Connectors</span><span class="popup-val"><span class="badge '+badgeClass+'">'+plugs.length+'x '+badgeText+'</span></span></div><div class="popup-row"><span class="popup-key">Power</span><span class="popup-val">'+powerKW+' kW</span></div></div></div>';
                 
                 marker.bindPopup(popupContent, { closeButton: false });
-                markers.addLayer(marker); 
+                marker.addTo(map);
+                activeMarkers.push(marker);
                 visibleCount++;
             });
             document.getElementById('stat-count').innerText = visibleCount.toLocaleString();
