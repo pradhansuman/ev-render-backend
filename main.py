@@ -24,26 +24,38 @@ fallback_data = [
     {"AddressInfo": {"Title": "EVRE Bhubaneswar", "AddressLine1": "Saheed Nagar", "StateOrProvince": "Odisha", "Latitude": 20.2926, "Longitude": 85.8326}, "OperatorInfo": {"Title": "EVRE"}, "Connections": [{"LevelID": 2, "PowerKW": 15}], "DateLastStatusUpdate": "2024-05-16T10:00:00Z"},
     {"AddressInfo": {"Title": "Tata Power Lucknow", "AddressLine1": "Hazratganj", "StateOrProvince": "Uttar Pradesh", "Latitude": 26.8467, "Longitude": 80.9462}, "OperatorInfo": {"Title": "Tata Power"}, "Connections": [{"LevelID": 3, "PowerKW": 50}, {"LevelID": 3, "PowerKW": 50}], "DateLastStatusUpdate": "2024-05-20T12:00:00Z"}
 ]
-
 def fetch_ev_data():
     global ev_data_cache
-    logging.info("Attempting to fetch live data from OpenChargeMap...")
+    logging.info("Attempting to fetch live data with API Key...")
     try:
-        url = "https://api.openchargemap.io/v3/poi/?output=json&countrycode=IN&maxresults=500&compact=true&verbose=false"
-        response = requests.get(url, timeout=15)
+        # Base URL for India, asking for 5,000 results
+        url = "https://api.openchargemap.io/v3/poi/?output=json&countrycode=IN&maxresults=5000&compact=true&verbose=false"
+        
+        # Securely grab the key from Render's Environment Variables
+        api_key = os.environ.get("OCM_API_KEY")
+        
+        if api_key:
+            url += f"&key={api_key}"
+            logging.info("API Key detected. Requesting premium data limit...")
+        else:
+            logging.warning("No API Key found in environment. Using public limits.")
+
+        # 30 second timeout since we are asking for more data
+        response = requests.get(url, timeout=30)
         
         if response.status_code == 200:
             data = response.json()
             if isinstance(data, list) and len(data) > 0:
                 ev_data_cache = data
                 logging.info(f"SUCCESS: Cached {len(ev_data_cache)} live stations.")
-                return # Exit function if successful
+                return 
             
         logging.warning("API returned invalid or empty data. Using fallback.")
     except Exception as e:
         logging.error(f"API Request Failed ({e}). Using fallback.")
     
-    # FALLBACK TRIGGER: If live API fails, use real backup data
+    # FALLBACK TRIGGER
+    ev_data_cache = fallback_data
     ev_data_cache = fallback_data
 
 scheduler = BackgroundScheduler()
