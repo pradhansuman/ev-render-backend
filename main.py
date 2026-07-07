@@ -21,7 +21,7 @@ def fetch_ev_data():
         
     try:
         # Lowered to 1000 to prevent timeouts on Render free tier
-        url = f"https://api.openchargemap.io/v3/poi/?output=json&countrycode=IN&maxresults=1000&compact=true&verbose=false&key={api_key}"
+        url = f"https://api.openchargemap.io/v3/poi/?output=json&countrycode=IN&maxresults=50&compact=true&verbose=false&key={api_key}"
         logging.info("Fetching 1000 stations from OCM...")
         response = requests.get(url, timeout=45)
         if response.status_code == 200:
