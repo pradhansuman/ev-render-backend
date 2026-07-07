@@ -18,37 +18,19 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
-        body { margin: 0; padding: 0; font-family: system-ui, sans-serif; background: #0f172a; color: white; }
-        #map { height: 100vh; width: 100vw; z-index: 1; }
-        
-        /* Floating UI Panels */
-        .ui-panel {
-            position: absolute; z-index: 1000; 
-            background: rgba(15, 23, 42, 0.95); 
-            backdrop-filter: blur(8px);
-            border: 1px solid #334155; 
-            border-radius: 0.75rem; 
-            padding: 1rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-        }
-        .filter-box { top: 1rem; left: 1rem; width: 280px; }
-        .stats-box { top: 1rem; right: 1rem; width: 220px; }
-        
-        select, button {
-            width: 100%; padding: 0.5rem; border-radius: 0.375rem; font-size: 0.875rem;
-            background-color: #1e293b; color: white; border: 1px solid #475569; outline: none;
-        }
-        select:focus, button:focus { border-color: #3b82f6; }
-        
-        /* Custom Map Markers */
-        .dc-marker { background-color: #ef4444; border: 2px solid white; border-radius: 50%; width: 14px; height: 14px; }
-        .ac-marker { background-color: #3b82f6; border: 2px solid white; border-radius: 50%; width: 10px; height: 10px; }
-        
-        /* Fix Leaflet popup styling for dark mode */
-        .leaflet-popup-content-wrapper { background: #1e293b; color: white; border-radius: 0.5rem; border: 1px solid #475569; }
-        .leaflet-popup-tip { background: #1e293b; }
-        .leaflet-popup-content { margin: 10px 14px; font-size: 13px; }
-    </style>
+    body { margin: 0; padding: 0; font-family: system-ui, sans-serif; background: #f8fafc; color: #1e293b; }
+    #map { height: 100vh; width: 100vw; z-index: 1; }
+    .ui-panel { position: absolute; z-index: 1000; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .filter-box { top: 1rem; left: 1rem; width: 280px; }
+    .stats-box { top: 1rem; right: 1rem; width: 220px; }
+    select, button { width: 100%; padding: 0.5rem; border-radius: 0.375rem; font-size: 0.875rem; background-color: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; outline: none; }
+    select:focus, button:focus { border-color: #3b82f6; }
+    .dc-marker { background-color: #ef4444; border: 2px solid white; border-radius: 50%; width: 14px; height: 14px; }
+    .ac-marker { background-color: #3b82f6; border: 2px solid white; border-radius: 50%; width: 10px; height: 10px; }
+    .leaflet-popup-content-wrapper { background: #ffffff; color: #333333; border-radius: 0.5rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .leaflet-popup-tip { background: #ffffff; }
+    .leaflet-popup-content { margin: 10px 14px; font-size: 13px; }
+</style>
 </head>
 <body>
 
@@ -107,7 +89,7 @@
                 spiderfyOnMaxZoom: true,
                 showCoverageOnHover: false,
                 iconCreateFunction: function(cluster) {
-                    return L.divIcon({ html: '<div style="background:rgba(59, 130, 246, 0.8); color:white; padding:5px 10px; border-radius:20px; font-weight:bold;">' + cluster.getChildCount() + '</div>', className: '', iconSize: L.point(40, 30) });
+                    return L.divIcon({ html: '<div style="background:rgba(59, 130, 246, 0.8); color:#1e293b; padding:5px 10px; border-radius:20px; font-weight:bold;">' + cluster.getChildCount() + '</div>', className: '', iconSize: L.point(40, 30) });
                 }
             }).addTo(map);
         }
@@ -182,12 +164,12 @@
                 let popupContent = `
                     <div style="min-width: 200px;">
                         <h3 style="font-size:15px; font-weight:bold; margin-bottom:5px; color:#60a5fa;">${station.AddressInfo?.Title || 'Unknown Station'}</h3>
-                        <p style="color:#94a3b8; font-size:12px; margin-bottom:8px;">${station.AddressInfo?.AddressLine1 || ''}, ${station.AddressInfo?.StateOrProvince || ''}</p>
-                        <div style="background:#0f172a; padding:8px; border-radius:4px; margin-bottom:4px; display:flex; justify-content:space-between;">
-                            <span style="color:#cbd5e1">Network:</span> <span style="color:white; font-weight:bold;">${operator}</span>
+                        <p style="color:#64748b; font-size:12px; margin-bottom:8px;">${station.AddressInfo?.AddressLine1 || ''}, ${station.AddressInfo?.StateOrProvince || ''}</p>
+                        <div style="background:#f1f5f9; padding:8px; border-radius:4px; margin-bottom:4px; display:flex; justify-content:space-between;">
+                            <span style="color:#64748b">Network:</span> <span style="color:#1e293b; font-weight:bold;">${operator}</span>
                         </div>
-                        <div style="background:#0f172a; padding:8px; border-radius:4px; display:flex; justify-content:space-between;">
-                            <span style="color:#cbd5e1">Plugs:</span> <span style="color:${hasDC ? '#ef4444' : '#3b82f6'}; font-weight:bold;">${plugs.length}x ${hasDC ? 'DC Fast' : 'AC'}</span>
+                        <div style="background:#f1f5f9; padding:8px; border-radius:4px; display:flex; justify-content:space-between;">
+                            <span style="color:#64748b">Plugs:</span> <span style="color:${hasDC ? '#ef4444' : '#3b82f6'}; font-weight:bold;">${plugs.length}x ${hasDC ? 'DC Fast' : 'AC'}</span>
                         </div>
                     </div>
                 `;
